@@ -1,0 +1,23 @@
+{
+    "files.eol": "\n",
+    "editor.fontLigatures": true,
+    "eslint.format.enable": true,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    },
+    "workbench.editor.highlightModifiedTabs": true,
+    "workbench.editor.tabSizing": "shrink",
+    "vetur.validation.template": false,
+    "eslint.validate": ["javascript", "javascriptreact", "vue"],
+    "[vue]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "css.validate": false,
+    "less.validate": false,
+    "scss.validate": false,
+    "stylelint.validate": ["css", "scss", "sass", "less", "postcss", "vue"]
+}
