@@ -1,5 +1,5 @@
 <template>
-    <div :class="$style.container">
+    <div :class="$style.wrapper">
         <section :class="$style.control"><Control /></section>
         <section :class="$style.board"><Board /></section>
     </div>
@@ -11,7 +11,7 @@ import Board from '@/components/Board.vue';
 </script>
 
 <style module>
-.container {
+.wrapper {
     display: flex;
     block-size: 100vh;
     block-size: 100dvh;
