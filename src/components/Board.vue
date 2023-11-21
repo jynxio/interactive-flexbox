@@ -1,15 +1,20 @@
 <template>
     <div :class="$style.wrapper">
-        <main><i v-for="index in itemCount" :key="index" /></main>
-        <aside><Axis /></aside>
-        <aside><Axis /></aside>
+        <main :class="$style['flex-container']">
+            <i v-for="index in itemCount" :key="index" />
+        </main>
+        <aside :class="$style['cross-axis']"><Axis type="cross" /></aside>
+        <aside :class="$style['main-axis']"><Axis type="main" /></aside>
+        <aside :class="$style.listener">
+            <i v-for="index in Array.from({ length: 4 })" :key="String(index)" />
+        </aside>
     </div>
 </template>
 
 <script setup lang="ts">
 import Axis from '@/components/Axis.vue';
 
-const itemCount = 4;
+const itemCount = 5;
 </script>
 
 <style module>
@@ -27,25 +32,47 @@ const itemCount = 4;
         inline-size: var(--size-length);
         margin: auto;
     }
+}
 
-    > main {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        padding: 1rem;
+.flex-container {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+    border-radius: 5px;
+    border: 1px solid #5e666f;
+
+    > i {
+        flex: 1 1 10%;
         border-radius: 5px;
-        border: 1px solid #5e666f;
-
-        > i {
-            flex: 1 1 10%;
-            border-radius: 5px;
-            border: 2px solid #778089;
-            background-color: #2d333a;
-        }
+        border: 2px solid #778089;
+        background-color: #2d333a;
     }
+}
 
-    > aside {
-        /* pointer-events: none; */
+.main-axis,
+.cross-axis,
+.listener {
+    pointer-events: none;
+}
+
+.main-axis {
+    rotate: 0deg;
+}
+
+.cross-axis {
+    rotate: 90deg;
+}
+
+.listener {
+    display: flex;
+    flex-wrap: wrap;
+
+    > i {
+        flex: 0 0 50%;
+        /* padding: 1rem; */
+        /* background-color: red; */
+        /* background-clip: content-box; */
     }
 }
 </style>

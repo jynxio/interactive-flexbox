@@ -1,126 +1,137 @@
 <template>
-    <div :class="$style.wrapper">
-        <section :class="[$style.axis, $style.background]">
-            <header></header>
-            <main></main>
-            <footer><i /><i /><i /></footer>
+    <div :class="[$style.wrapper, $style[type]]">
+        <section :class="$style['axis-body']">
+            <div :class="$style.footer"></div>
+            <div :class="$style.body"></div>
+            <div :class="$style.header"></div>
         </section>
-        <section :class="[$style.axis, $style.content]">
-            <header></header>
-            <main></main>
-            <footer><i /><i /><i /></footer>
+        <section :class="$style['axis-shadow']">
+            <div :class="$style.footer"></div>
+            <div :class="$style.body"></div>
+            <div :class="$style.header"></div>
+        </section>
+        <section :class="$style['axis-title']">
+            {{ type === 'main' ? 'MAIN AXIS' : 'CROSS AXIS' }}
         </section>
     </div>
 </template>
 
 <script setup lang="ts">
-interface Props {
-    color: string;
-    style: string[];
-}
+import { PropType } from 'vue';
 
-// TODO:
-
-withDefaults(defineProps<Props>(), {
-    color: String,
-    style: () => ['solid', 'dotted'],
+defineProps({
+    type: {
+        type: String as PropType<'main' | 'cross'>,
+        default: 'main',
+        require: true,
+    },
 });
 </script>
 
 <style module>
 .wrapper {
     --base-thickness: 0.2rem;
+    --shadow-color: #0d0f11;
+
+    &.main {
+        --body-color: #ffd500;
+    }
+
+    &.cross {
+        --body-color: #70a1ec;
+    }
 
     position: relative;
     block-size: 100%;
     inline-size: 100%;
 }
 
-.background {
-    --fill-color: #0d0f11;
-    --border-style: solid;
-    --extra: var(--base-thickness);
-    --thickness: calc(var(--base-thickness) + var(--extra) * 2);
-    --header-length: calc(var(--base-thickness) * 10 + var(--extra) * 2);
-    --footer-length: calc(var(--base-thickness) * 11 + var(--extra) * 2);
-
-    z-index: 0;
-}
-
-.content {
-    --fill-color: #ffd500;
-    --border-style: solid;
+.axis-body {
+    --color: var(--body-color);
     --thickness: var(--base-thickness);
     --header-length: calc(var(--base-thickness) * 10);
-    --footer-length: calc(var(--base-thickness) * 11);
+    --footer-length: calc(var(--header-length) * 1.2);
 
     z-index: 1;
 }
 
-.axis {
+.axis-shadow {
+    --color: var(--shadow-color);
+    --extra: var(--base-thickness);
+    --thickness: calc(var(--base-thickness) + var(--extra) * 2);
+    --header-length: calc(var(--base-thickness) * 10 + var(--extra) * 2);
+    --footer-length: calc(var(--header-length) * 1.2);
+
+    z-index: 0;
+}
+
+.axis-body,
+.axis-shadow {
     position: absolute;
-    block-size: 100%;
-    inline-size: 100%;
+    inset: 0;
+    block-size: auto;
+    inline-size: auto;
 
     > * {
         position: absolute;
-        top: 50%;
     }
 
-    > main {
-        left: 50%;
+    > .body {
+        inset: 50% auto auto 0;
         inline-size: 100%;
-        border-block-start: var(--thickness) var(--border-style) var(--fill-color);
-        translate: -50% -50%;
+        border-block-start: var(--thickness) solid var(--color);
+        translate: 0 -50%;
     }
 
-    > header,
-    > footer {
-        position: absolute;
-        inline-size: var(--thickness);
-    }
-
-    > header {
-        left: 0;
+    > .header {
+        inset: 50% auto auto 0;
         block-size: var(--header-length);
         border-radius: 999rem;
-        background-color: var(--fill-color);
-        translate: calc(-1 * var(--thickness) / 2) -50%;
+        border-inline-start: var(--thickness) solid var(--color);
+        translate: calc(-0.5 * var(--thickness)) -50%;
     }
 
-    > footer {
-        right: 0;
-        display: flex;
+    > .footer {
+        inset: 50% 0 auto auto;
         block-size: var(--footer-length);
-        flex-direction: column;
-        translate: calc(1 * var(--thickness) / 2) -50%;
+        inline-size: var(--thickness);
+        translate: calc(+0.5 * var(--thickness)) -50%;
 
-        > i:nth-child(3) {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            block-size: calc(var(--thickness) * 0.8);
-            inline-size: calc(var(--thickness) * 0.8);
+        &::before,
+        &::after {
+            content: '';
+            display: block;
+            block-size: 50%;
+            inline-size: 100%;
             border-radius: 999rem;
-            background-color: var(--fill-color);
-            translate: -50% -50%;
+            background-color: var(--color);
         }
 
-        > i:nth-child(-n + 2) {
-            flex: 1 0 0;
-            border-radius: 999rem;
-            background-color: var(--fill-color);
+        &::before {
+            rotate: -45deg;
+            translate: 0 calc(+0.3 * var(--base-thickness));
+            transform-origin: bottom center;
+        }
 
-            &:nth-child(1) {
-                rotate: -45deg;
-                transform-origin: bottom center;
-            }
-
-            &:nth-child(2) {
-                rotate: 45deg;
-                transform-origin: top center;
-            }
+        &::after {
+            rotate: 45deg;
+            translate: 0 calc(-0.3 * var(--base-thickness));
+            transform-origin: top center;
         }
     }
+}
+
+.axis-title {
+    --block-offset: calc(var(--base-thickness));
+    --inline-offset: calc(var(--block-offset) * 3);
+
+    position: absolute;
+    inset: 50% auto auto 0;
+    color: var(--body-color);
+    font-size: 0.8rem;
+    font-family: monospace;
+    font-weight: 1000;
+    text-shadow: 0 0 2px var(--shadow-color);
+    translate: var(--inline-offset) var(--block-offset);
 }
 </style>
