@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import Axis from '@/components/Axis.vue';
 import Gui from 'lil-gui';
-import { ref, reactive, watchSyncEffect, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, watchSyncEffect, onMounted, onUnmounted, watchEffect } from 'vue';
 
 type Radian = number;
 type Vector = { x: number; y: number };
@@ -33,16 +33,23 @@ const containerCss = reactive({
     'row-gap': 2,
     'column-gap': 2,
 });
+const allItemsCss = reactive({
+    'flex-basis': 'auto',
+    'flex-grow': 0,
+    'flex-shrink': 1,
+});
 const mainCssRotation = ref('0deg');
 const crossCssRotation = ref('odeg');
 
 const gui = new Gui();
+const containerFolder = gui.addFolder('Flex Container');
+const allItemsFolder = gui.addFolder('All Flex Items');
 
-gui.add(containerCss, 'direction', ['ltr', 'rtl']);
-gui.add(containerCss, 'writing-mode', ['horizontal-tb', 'vertical-lr', 'vertical-rl']);
-gui.add(containerCss, 'flex-direction', ['row', 'row-reverse', 'column', 'column-reverse']);
-gui.add(containerCss, 'flex-wrap', ['nowrap', 'wrap', 'wrap-reverse']);
-gui.add(containerCss, 'justify-content', [
+containerFolder.add(containerCss, 'direction', ['ltr', 'rtl']);
+containerFolder.add(containerCss, 'writing-mode', ['horizontal-tb', 'vertical-lr', 'vertical-rl']);
+containerFolder.add(containerCss, 'flex-direction', ['row', 'row-reverse', 'column', 'column-reverse']);
+containerFolder.add(containerCss, 'flex-wrap', ['nowrap', 'wrap', 'wrap-reverse']);
+containerFolder.add(containerCss, 'justify-content', [
     'normal',
     'start',
     'end',
@@ -56,7 +63,7 @@ gui.add(containerCss, 'justify-content', [
     'space-around',
     'space-evenly',
 ]);
-gui.add(containerCss, 'align-content', [
+containerFolder.add(containerCss, 'align-content', [
     'normal',
     'stretch',
     'flex-start',
@@ -70,7 +77,7 @@ gui.add(containerCss, 'align-content', [
     'self-start',
     'self-end',
 ]);
-gui.add(containerCss, 'align-items', [
+containerFolder.add(containerCss, 'align-items', [
     'normal',
     'stretch',
     'flex-start',
@@ -85,8 +92,32 @@ gui.add(containerCss, 'align-items', [
     'space-around',
     'space-evenly',
 ]);
-gui.add(containerCss, 'row-gap', 0, 100, 1);
-gui.add(containerCss, 'column-gap', 0, 100, 1);
+containerFolder.add(containerCss, 'row-gap', 0, 100, 1);
+containerFolder.add(containerCss, 'column-gap', 0, 100, 1);
+
+allItemsFolder
+    .add(allItemsCss, 'flex-basis', [
+        'auto',
+        'content',
+        'min-content',
+        'max-content',
+        'fit-content',
+        '&lt;length&gt;',
+        '&lt;percentage&gt;',
+    ])
+    .onChange((value: string) => {
+        if (value === '&lt;length&gt;') return void allItemsFlexBasisController.enable();
+        if (value === '&lt;percentage&gt;') return void allItemsFlexBasisController.enable();
+
+        allItemsFlexBasisController.disable();
+    });
+
+const allItemsFlexBasisController = allItemsFolder.add(allItemsCss, 'flex-basis').disable();
+
+allItemsFolder.add(allItemsCss, 'flex-grow', 0, 10, 1);
+allItemsFolder.add(allItemsCss, 'flex-shrink', 0, 10, 1);
+
+// watchSyncEffect(() => console.log(allItemsCss['flex-basis']));
 
 onUnmounted(() => gui.destroy());
 onMounted(() => {

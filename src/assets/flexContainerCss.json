@@ -1,0 +1,11 @@
+{
+    "direction": "ltr",
+    "writing-mode": "horizontal-tb",
+    "flex-direction": "row",
+    "flex-wrap": "nowrap",
+    "justify-content": "normal",
+    "align-content": "normal",
+    "align-items": "normal",
+    "row-gap": 0,
+    "column-gap": 0
+}
