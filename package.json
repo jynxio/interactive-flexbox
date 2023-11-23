@@ -12,6 +12,7 @@
         "stylelint": "stylelint \"**/*.{css,scss,sass,less,vue}\" --fix"
     },
     "dependencies": {
+        "lil-gui": "^0.19.1",
         "vue": "^3.3.8"
     },
     "devDependencies": {
