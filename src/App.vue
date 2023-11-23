@@ -14,141 +14,72 @@
 <script setup lang="ts">
 import Axis from '@/components/Axis.vue';
 import Gui from 'lil-gui';
-import { ref, reactive, watchSyncEffect, onMounted, onUnmounted, watchEffect } from 'vue';
+import flexContainerStyleData from '@/assets/flexContainerStyle.json';
+import { ref, reactive, watchSyncEffect, onMounted, onUnmounted } from 'vue';
 
 type Radian = number;
 type Vector = { x: number; y: number };
 
 const itemCount = 5;
+
 const listenerDom = ref<HTMLElement>();
 const containerDom = ref<HTMLElement>();
-const containerCss = reactive({
-    'direction': 'ltr',
-    'writing-mode': 'horizontal-tb',
-    'flex-direction': 'row',
-    'flex-wrap': 'nowrap',
-    'justify-content': 'normal',
-    'align-content': 'normal',
-    'align-items': 'normal',
-    'row-gap': 2,
-    'column-gap': 2,
-});
-const allItemsCss = reactive({
-    'flex-basis': 'auto',
-    'flex-grow': 0,
-    'flex-shrink': 1,
-});
+
 const mainCssRotation = ref('0deg');
 const crossCssRotation = ref('odeg');
 
+let flexContainerStyle = {};
+
+for (const item of flexContainerStyleData) {
+    const name = item.name;
+    const mode = item.mode as 'option' | 'length' | 'percentage';
+    const value = item[mode];
+
+    if (!value) throw new Error('Value is not undefined');
+
+    flexContainerStyle[name] = value;
+}
+
+flexContainerStyle = reactive(flexContainerStyle);
+
 const gui = new Gui();
-const containerFolder = gui.addFolder('Flex Container');
-const allItemsFolder = gui.addFolder('All Flex Items');
+const flexContainerFolder = gui.addFolder('Flex Container');
+const flexItemsFolder = gui.addFolder('Flex Items');
 
-containerFolder.add(containerCss, 'direction', ['ltr', 'rtl']);
-containerFolder.add(containerCss, 'writing-mode', ['horizontal-tb', 'vertical-lr', 'vertical-rl']);
-containerFolder.add(containerCss, 'flex-direction', ['row', 'row-reverse', 'column', 'column-reverse']);
-containerFolder.add(containerCss, 'flex-wrap', ['nowrap', 'wrap', 'wrap-reverse']);
-containerFolder.add(containerCss, 'justify-content', [
-    'normal',
-    'start',
-    'end',
-    'left',
-    'right',
-    'center',
-    'flex-start',
-    'flex-end',
-    'stretch',
-    'space-between',
-    'space-around',
-    'space-evenly',
-]);
-containerFolder.add(containerCss, 'align-content', [
-    'normal',
-    'stretch',
-    'flex-start',
-    'flex-end',
-    'center',
-    'baseline',
-    'first baseline',
-    'last baseline',
-    'start',
-    'end',
-    'self-start',
-    'self-end',
-]);
-containerFolder.add(containerCss, 'align-items', [
-    'normal',
-    'stretch',
-    'flex-start',
-    'flex-end',
-    'center',
-    'baseline',
-    'first baseline',
-    'last baseline',
-    'start',
-    'end',
-    'space-between',
-    'space-around',
-    'space-evenly',
-]);
-containerFolder.add(containerCss, 'row-gap', 0, 100, 1);
-containerFolder.add(containerCss, 'column-gap', 0, 100, 1);
+for (const { name, mode, options } of flexContainerStyleData) {
+    flexContainerFolder.add(flexContainerStyle, name, mode === 'option' ? options : undefined);
+}
 
-allItemsFolder
-    .add(allItemsCss, 'flex-basis', [
-        'auto',
-        'content',
-        'min-content',
-        'max-content',
-        'fit-content',
-        '&lt;length&gt;',
-        '&lt;percentage&gt;',
-    ])
-    .onChange((value: string) => {
-        if (value === '&lt;length&gt;') return void allItemsFlexBasisController.enable();
-        if (value === '&lt;percentage&gt;') return void allItemsFlexBasisController.enable();
+// onUnmounted(() => gui.destroy());
+// onMounted(() => {
+//     watchSyncEffect(() => {
+//         for (const pair of Object.entries(containerCss)) {
+//             const name = pair[0];
+//             const value = typeof pair[1] === 'number' ? pair[1] + '%' : pair[1];
 
-        allItemsFlexBasisController.disable();
-    });
+//             containerDom.value!.style.setProperty(name, typeof value === 'number' ? value + '%' : value);
+//         }
+//     });
 
-const allItemsFlexBasisController = allItemsFolder.add(allItemsCss, 'flex-basis').disable();
+//     watchSyncEffect(() => {
+//         listenerDom.value!.style.setProperty('direction', containerCss.direction);
+//         listenerDom.value!.style.setProperty('writing-mode', containerCss['writing-mode']);
+//         listenerDom.value!.style.setProperty('flex-direction', containerCss['flex-direction']);
 
-allItemsFolder.add(allItemsCss, 'flex-grow', 0, 10, 1);
-allItemsFolder.add(allItemsCss, 'flex-shrink', 0, 10, 1);
+//         const children = listenerDom.value!.children;
+//         const domrects = Array.from(children).map(child => child.getBoundingClientRect());
 
-// watchSyncEffect(() => console.log(allItemsCss['flex-basis']));
+//         const vectorBase: Vector = { x: 1, y: 0 };
+//         const vectorMain: Vector = { x: domrects[1].x - domrects[0].x, y: domrects[0].y - domrects[1].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
+//         const vectorCross: Vector = { x: domrects[2].x - domrects[0].x, y: domrects[0].y - domrects[2].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
 
-onUnmounted(() => gui.destroy());
-onMounted(() => {
-    watchSyncEffect(() => {
-        for (const pair of Object.entries(containerCss)) {
-            const name = pair[0];
-            const value = typeof pair[1] === 'number' ? pair[1] + '%' : pair[1];
+//         const radianMain = createAngleBetweenVectors(vectorBase, vectorMain);
+//         const radianCross = createAngleBetweenVectors(vectorBase, vectorCross);
 
-            containerDom.value!.style.setProperty(name, typeof value === 'number' ? value + '%' : value);
-        }
-    });
-
-    watchSyncEffect(() => {
-        listenerDom.value!.style.setProperty('direction', containerCss.direction);
-        listenerDom.value!.style.setProperty('writing-mode', containerCss['writing-mode']);
-        listenerDom.value!.style.setProperty('flex-direction', containerCss['flex-direction']);
-
-        const children = listenerDom.value!.children;
-        const domrects = Array.from(children).map(child => child.getBoundingClientRect());
-
-        const vectorBase: Vector = { x: 1, y: 0 };
-        const vectorMain: Vector = { x: domrects[1].x - domrects[0].x, y: domrects[0].y - domrects[1].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
-        const vectorCross: Vector = { x: domrects[2].x - domrects[0].x, y: domrects[0].y - domrects[2].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
-
-        const radianMain = createAngleBetweenVectors(vectorBase, vectorMain);
-        const radianCross = createAngleBetweenVectors(vectorBase, vectorCross);
-
-        mainCssRotation.value = createCssRotation(radianMain);
-        crossCssRotation.value = createCssRotation(radianCross);
-    });
-});
+//         mainCssRotation.value = createCssRotation(radianMain);
+//         crossCssRotation.value = createCssRotation(radianCross);
+//     });
+// });
 
 /**
  * 计算v1至v2的逆时针夹角（弧度）
