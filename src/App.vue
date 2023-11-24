@@ -12,74 +12,134 @@
 </template>
 
 <script setup lang="ts">
+import containerRuleData from '@/assets/containerRuleData.ts';
 import Axis from '@/components/Axis.vue';
-import Gui from 'lil-gui';
-import flexContainerStyleData from '@/assets/flexContainerStyle.json';
-import { ref, reactive, watchSyncEffect, onMounted, onUnmounted } from 'vue';
+import { GUI as Gui, Controller } from 'lil-gui';
+import { ref, reactive, watchSyncEffect, onMounted, onUnmounted, computed } from 'vue';
 
+/**
+ *
+ */
 type Radian = number;
 type Vector = { x: number; y: number };
 
+/**
+ *
+ */
 const itemCount = 5;
 
+/**
+ *
+ */
 const listenerDom = ref<HTMLElement>();
 const containerDom = ref<HTMLElement>();
 
 const mainCssRotation = ref('0deg');
 const crossCssRotation = ref('odeg');
 
-let flexContainerStyle = {};
+const containerRule = reactive<{ [key: string]: string }>({});
 
-for (const item of flexContainerStyleData) {
-    const name = item.name;
-    const mode = item.mode as 'option' | 'length' | 'percentage';
-    const value = item[mode];
+for (const declaration of containerRuleData) {
+    const value = declaration.value[declaration.mode];
 
-    if (!value) throw new Error('Value is not undefined');
+    if (value === undefined) throw new Error(`DataError: the declaration.value.${declaration.mode} does not exist`);
 
-    flexContainerStyle[name] = value;
+    containerRule[declaration.property] = value;
 }
 
-flexContainerStyle = reactive(flexContainerStyle);
+/**
+ *
+ */
+onMounted(() => {
+    for (const key of Object.keys(containerRule)) {
+        watchSyncEffect(() => {
+            const property = key;
+            const value = containerRule[key];
 
-const gui = new Gui();
-const flexContainerFolder = gui.addFolder('Flex Container');
-const flexItemsFolder = gui.addFolder('Flex Items');
+            containerDom.value!.style.setProperty(property, value);
+        });
+    }
 
-for (const { name, mode, options } of flexContainerStyleData) {
-    flexContainerFolder.add(flexContainerStyle, name, mode === 'option' ? options : undefined);
+    watchSyncEffect(() => {
+        listenerDom.value!.style.setProperty('direction', containerRule.direction);
+        listenerDom.value!.style.setProperty('writing-mode', containerRule['writing-mode']);
+        listenerDom.value!.style.setProperty('flex-direction', containerRule['flex-direction']);
+
+        const children = listenerDom.value!.children;
+        const domrects = Array.from(children).map(child => child.getBoundingClientRect());
+
+        const vectorBase: Vector = { x: 1, y: 0 };
+        const vectorMain: Vector = { x: domrects[1].x - domrects[0].x, y: domrects[0].y - domrects[1].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
+        const vectorCross: Vector = { x: domrects[2].x - domrects[0].x, y: domrects[0].y - domrects[2].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
+
+        const radianMain = createAngleBetweenVectors(vectorBase, vectorMain);
+        const radianCross = createAngleBetweenVectors(vectorBase, vectorCross);
+
+        mainCssRotation.value = createCssRotation(radianMain);
+        crossCssRotation.value = createCssRotation(radianCross);
+    });
+});
+
+/**
+ *
+ */
+const gui = new Gui().title('CSS Rule Controller');
+const containerRuleFolder = gui.addFolder('Flex Container CSS Rule');
+
+for (const declaration of containerRuleData) {
+    const controllerkeys = Object.keys(declaration.value);
+
+    const hasOption = controllerkeys.includes('option');
+
+    if (!hasOption) {
+        const key = controllerkeys[0];
+        const controller = containerRuleFolder.add(declaration.value, key).name(declaration.property);
+
+        controller.onChange((str: string) => (containerRule[declaration.property] = str));
+
+        continue;
+    }
+
+    const controllerMap = new Map<string, Controller>();
+    const options = declaration.options?.map(sanitizeCssDataType);
+
+    if (options === undefined) throw new Error('DataError: the declaration is missing "options"');
+
+    const otherKeys = controllerkeys.filter(key => key !== 'option');
+    const optionController = containerRuleFolder.add(declaration.value, 'option', options).name(declaration.property);
+
+    controllerMap.set('option', optionController);
+
+    const otherControllers = otherKeys.map(key => {
+        const otherController = containerRuleFolder.add(declaration.value, key).name('').hide();
+
+        controllerMap.set(key, otherController);
+
+        return otherController;
+    });
+    const currentController = controllerMap.get(declaration.mode);
+
+    currentController?.show();
+
+    optionController.onChange((option: string) => {
+        const isCssDataType = checkCssDataType(option);
+
+        declaration.mode = 'option';
+        otherControllers.forEach(controller => controller?.hide());
+
+        if (isCssDataType) {
+            const content = extractCssDataType(option) as 'length' | 'percentage';
+
+            declaration.mode = content;
+            controllerMap.get(content)?.show();
+        }
+
+        containerRule[declaration.property] = declaration.value[declaration.mode]!;
+    });
+    otherControllers.forEach(controller =>
+        controller!.onChange(() => (containerRule[declaration.property] = declaration.value[declaration.mode]!)),
+    );
 }
-
-// onUnmounted(() => gui.destroy());
-// onMounted(() => {
-//     watchSyncEffect(() => {
-//         for (const pair of Object.entries(containerCss)) {
-//             const name = pair[0];
-//             const value = typeof pair[1] === 'number' ? pair[1] + '%' : pair[1];
-
-//             containerDom.value!.style.setProperty(name, typeof value === 'number' ? value + '%' : value);
-//         }
-//     });
-
-//     watchSyncEffect(() => {
-//         listenerDom.value!.style.setProperty('direction', containerCss.direction);
-//         listenerDom.value!.style.setProperty('writing-mode', containerCss['writing-mode']);
-//         listenerDom.value!.style.setProperty('flex-direction', containerCss['flex-direction']);
-
-//         const children = listenerDom.value!.children;
-//         const domrects = Array.from(children).map(child => child.getBoundingClientRect());
-
-//         const vectorBase: Vector = { x: 1, y: 0 };
-//         const vectorMain: Vector = { x: domrects[1].x - domrects[0].x, y: domrects[0].y - domrects[1].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
-//         const vectorCross: Vector = { x: domrects[2].x - domrects[0].x, y: domrects[0].y - domrects[2].y }; // 因为屏幕坐标系的Y轴与笛卡尔坐标系的Y轴相反，因此对Y的计算要取反
-
-//         const radianMain = createAngleBetweenVectors(vectorBase, vectorMain);
-//         const radianCross = createAngleBetweenVectors(vectorBase, vectorCross);
-
-//         mainCssRotation.value = createCssRotation(radianMain);
-//         crossCssRotation.value = createCssRotation(radianCross);
-//     });
-// });
 
 /**
  * 计算v1至v2的逆时针夹角（弧度）
@@ -117,6 +177,43 @@ function createCssRotation(angle: Radian): string {
     if (angle <= (Math.PI / 4) * 7) return '90deg';
 
     return '0deg';
+}
+
+/**
+ * 提取CSS data type
+ * @example
+ * extractCssDataType('length');         // 'length'
+ * extractCssDataType('<length>');       // 'length'
+ * extractCssDataType('&lt;length&gt;'); // 'length'
+ */
+function extractCssDataType(input: string): string {
+    const regex = /<([^>]+)>|&lt;([^&]+)&gt;/;
+    const match = input.match(regex);
+
+    if (match) return match[1] || match[2];
+
+    return input;
+}
+
+/**
+ * 消毒CSS data type
+ * @example
+ * sanitizeCssDataType('<length>'); // '&lt;length&gt;'
+ */
+function sanitizeCssDataType(input: string): string {
+    return input.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * 检查CSS data type
+ * @example
+ * checkCssDataType('length');         // false
+ * checkCssDataType('<length>');       // true
+ * checkCssDataType('&lt;length&gt;'); // true
+ */
+function checkCssDataType(input: string): boolean {
+    const regex = /^<[^>]+>$|^&lt;[^&]+&gt;$/;
+    return regex.test(input);
 }
 </script>
 
