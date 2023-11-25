@@ -12,25 +12,18 @@
 </template>
 
 <script setup lang="ts">
-import containerRuleData from '@/assets/containerRuleData.ts';
+import containerRuleData from '@/assets/container';
 import Axis from '@/components/Axis.vue';
-import { GUI as Gui, Controller } from 'lil-gui';
-import { ref, reactive, watchSyncEffect, onMounted, onUnmounted, computed } from 'vue';
+import { GUI as Gui } from 'lil-gui';
+import { Radian, Vector } from '@/types';
+import { isDataType, createAngleBetweenVectors } from '@/utils';
+import { ref, reactive, watchSyncEffect, onMounted } from 'vue';
 
 /**
  *
  */
-type Radian = number;
-type Vector = { x: number; y: number };
+const itemCount = 5; // Flex Item的数量
 
-/**
- *
- */
-const itemCount = 5;
-
-/**
- *
- */
 const listenerDom = ref<HTMLElement>();
 const containerDom = ref<HTMLElement>();
 
@@ -39,27 +32,88 @@ const crossCssRotation = ref('odeg');
 
 const containerRule = reactive<{ [key: string]: string }>({});
 
+// 初始化containerRule的内容
 for (const declaration of containerRuleData) {
-    const value = declaration.value[declaration.mode];
+    const { name, type } = declaration;
 
-    if (value === undefined) throw new Error(`DataError: the declaration.value.${declaration.mode} does not exist`);
+    switch (type) {
+        case 'data-type':
+        case 'option-type': {
+            containerRule[name] = declaration.value;
 
-    containerRule[declaration.property] = value;
+            break;
+        }
+
+        case 'mixed-type': {
+            const mode = isDataType(declaration.option.value) ? 'data-type' : 'option-type';
+            const value = mode === 'option-type' ? declaration.option.value : declaration.dataType.value;
+
+            containerRule[name] = value;
+
+            break;
+        }
+    }
 }
 
 /**
- *
+ * 控制面板
+ */
+const gui = new Gui().title('CSS Rule Controller');
+const guiData = structuredClone(containerRuleData); //避免污染原始数据
+const containerFolder = gui.addFolder('Flex Container CSS Rule');
+
+for (const declaration of guiData) {
+    const { name, type } = declaration;
+
+    switch (type) {
+        case 'data-type':
+        case 'option-type': {
+            const options = type === 'option-type' ? declaration.options : undefined;
+
+            containerFolder
+                .add(declaration, 'value', options)
+                .name(name)
+                .onChange((value: string) => (containerRule[name] = value));
+
+            break;
+        }
+
+        case 'mixed-type': {
+            const { option, dataType } = declaration;
+            const optionController = containerFolder.add(option, 'value', option.options).name(name);
+            const dataTypeController = containerFolder.add(dataType, 'value').name('');
+
+            dataTypeController[isDataType(option.value) ? 'show' : 'hide']();
+
+            dataTypeController.onChange((value: string) => (containerRule[name] = value));
+            optionController.onChange((value: string) => {
+                if (isDataType(value)) {
+                    dataTypeController.show();
+                    containerRule[name] = dataType.value;
+
+                    return;
+                }
+
+                dataTypeController.hide();
+                containerRule[name] = option.value;
+            });
+
+            break;
+        }
+    }
+}
+
+/**
+ * 更新样式
  */
 onMounted(() => {
-    for (const key of Object.keys(containerRule)) {
-        watchSyncEffect(() => {
-            const property = key;
-            const value = containerRule[key];
+    // 更新Flex Container元素
+    const properties = Object.keys(containerRule);
 
-            containerDom.value!.style.setProperty(property, value);
-        });
-    }
+    for (const property of properties)
+        watchSyncEffect(() => containerDom.value!.style.setProperty(property, containerRule[property]));
 
+    // 更新Flex Container 的Listener元素
     watchSyncEffect(() => {
         listenerDom.value!.style.setProperty('direction', containerRule.direction);
         listenerDom.value!.style.setProperty('writing-mode', containerRule['writing-mode']);
@@ -81,94 +135,7 @@ onMounted(() => {
 });
 
 /**
- *
- */
-const gui = new Gui().title('CSS Rule Controller');
-const containerRuleFolder = gui.addFolder('Flex Container CSS Rule');
-
-for (const declaration of containerRuleData) {
-    const controllerkeys = Object.keys(declaration.value);
-
-    const hasOption = controllerkeys.includes('option');
-
-    if (!hasOption) {
-        const key = controllerkeys[0];
-        const controller = containerRuleFolder.add(declaration.value, key).name(declaration.property);
-
-        controller.onChange((str: string) => (containerRule[declaration.property] = str));
-
-        continue;
-    }
-
-    const controllerMap = new Map<string, Controller>();
-    const options = declaration.options?.map(sanitizeCssDataType);
-
-    if (options === undefined) throw new Error('DataError: the declaration is missing "options"');
-
-    const otherKeys = controllerkeys.filter(key => key !== 'option');
-    const optionController = containerRuleFolder.add(declaration.value, 'option', options).name(declaration.property);
-
-    controllerMap.set('option', optionController);
-
-    const otherControllers = otherKeys.map(key => {
-        const otherController = containerRuleFolder.add(declaration.value, key).name('').hide();
-
-        controllerMap.set(key, otherController);
-
-        return otherController;
-    });
-    const currentController = controllerMap.get(declaration.mode);
-
-    currentController?.show();
-
-    optionController.onChange((option: string) => {
-        const isCssDataType = checkCssDataType(option);
-
-        declaration.mode = 'option';
-        otherControllers.forEach(controller => controller?.hide());
-
-        if (isCssDataType) {
-            const content = extractCssDataType(option) as 'length' | 'percentage';
-
-            declaration.mode = content;
-            controllerMap.get(content)?.show();
-        }
-
-        containerRule[declaration.property] = declaration.value[declaration.mode]!;
-    });
-    otherControllers.forEach(controller =>
-        controller!.onChange(() => (containerRule[declaration.property] = declaration.value[declaration.mode]!)),
-    );
-}
-
-/**
- * 计算v1至v2的逆时针夹角（弧度）
- */
-function createAngleBetweenVectors(v1: Vector, v2: Vector): Radian {
-    // 计算两个向量之间的角度
-    const angle = Math.acos(createDotProduct(v1, v2) / (createMagnitude(v1) * createMagnitude(v2)));
-
-    // 使用叉积判断旋转方向，如果叉积非负，则直接返回
-    if (createCrossProduct(v1, v2) >= 0) return angle;
-
-    // 否则返回补角
-    return Math.PI * 2 - angle;
-
-    function createDotProduct(v1: Vector, v2: Vector): number {
-        return v1.x * v2.x + v1.y * v2.y;
-    }
-
-    function createCrossProduct(v1: Vector, v2: Vector): number {
-        return v1.x * v2.y - v1.y * v2.x;
-    }
-
-    function createMagnitude(v: Vector): number {
-        return Math.sqrt(v.x * v.x + v.y * v.y);
-    }
-}
-
-/**
- * 创建CSS的Rotation
+ * 创建CSS的旋转值
  */
 function createCssRotation(angle: Radian): string {
     if (angle <= (Math.PI / 4) * 1) return '0deg';
@@ -177,43 +144,6 @@ function createCssRotation(angle: Radian): string {
     if (angle <= (Math.PI / 4) * 7) return '90deg';
 
     return '0deg';
-}
-
-/**
- * 提取CSS data type
- * @example
- * extractCssDataType('length');         // 'length'
- * extractCssDataType('<length>');       // 'length'
- * extractCssDataType('&lt;length&gt;'); // 'length'
- */
-function extractCssDataType(input: string): string {
-    const regex = /<([^>]+)>|&lt;([^&]+)&gt;/;
-    const match = input.match(regex);
-
-    if (match) return match[1] || match[2];
-
-    return input;
-}
-
-/**
- * 消毒CSS data type
- * @example
- * sanitizeCssDataType('<length>'); // '&lt;length&gt;'
- */
-function sanitizeCssDataType(input: string): string {
-    return input.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/**
- * 检查CSS data type
- * @example
- * checkCssDataType('length');         // false
- * checkCssDataType('<length>');       // true
- * checkCssDataType('&lt;length&gt;'); // true
- */
-function checkCssDataType(input: string): boolean {
-    const regex = /^<[^>]+>$|^&lt;[^&]+&gt;$/;
-    return regex.test(input);
 }
 </script>
 

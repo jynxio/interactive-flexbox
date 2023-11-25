@@ -1,3 +1,5 @@
+import { isOption, isDataType, replaceAngleBracket } from '@/utils';
+
 // 术语
 // - rule       : 样式声明的集合，如{ inline-size: 1rem; block-size: 1rem }
 // - declaration: 样式声明
@@ -5,17 +7,17 @@
 // - value      : 样式声明的值，如1rem
 // - data type  : value的数据类型，比如<number>、<percentage>
 
-type OptionType = {
-    type: 'option-type';
-    name: string;
-    value: string;
-    options: string[];
-};
 type DataType = {
     type: 'data-type';
     name: string;
     value: string;
     placeholder: string;
+};
+type OptionType = {
+    type: 'option-type';
+    name: string;
+    value: string;
+    options: string[];
 };
 type MixedType = {
     type: 'mixed-type';
@@ -25,10 +27,8 @@ type MixedType = {
         options: string[];
     };
     dataType: {
-        [Key: `<${string}>`]: {
-            value: string;
-            placeholder: string;
-        };
+        value: string;
+        placeholder: string;
     };
 };
 type Rule = (OptionType | DataType | MixedType)[];
@@ -120,55 +120,87 @@ const data: Rule = [
         type: 'mixed-type',
         name: 'row-gap',
         option: {
-            value: '<percentage>',
-            options: ['normal', '<length>', '<percentage>'],
+            value: '<dataType>',
+            options: ['normal', '<dataType>'],
         },
         dataType: {
-            '<length>': {
-                value: '1rem',
-                placeholder: '<length>',
-            },
-            '<percentage>': {
-                value: '2%',
-                placeholder: '<percentage>',
-            },
+            value: '2%',
+            placeholder: '<length> | <percentage>',
         },
     },
     {
         type: 'mixed-type',
         name: 'column-gap',
         option: {
-            value: '<percentage>',
-            options: ['normal', '<length>', '<percentage>'],
+            value: '<dataType>',
+            options: ['normal', '<dataType>'],
         },
         dataType: {
-            '<length>': {
-                value: '1rem',
-                placeholder: '<length>',
-            },
-            '<percentage>': {
-                value: '2%',
-                placeholder: '<percentage>',
-            },
+            value: '2%',
+            placeholder: '<length> | <percentage>',
         },
     },
 ];
 
-/**
- * 将所有<和>都转换成&lt;和&gt;
- */
-function sanitize(data: Rule): Rule {
-    for (const declaration of data) {
-        if (declaration.type === 'data-type') continue;
-        if (declaration.type === 'option-type') {
-            const isCorrect = declaration.options.includes(declaration.value);
+sanitize(data);
+check(data);
 
-            if (!isCorrect) throw new Error('无法在options中找到option'); // TODO:
+/**
+ * 将数据中的所有<和>字符都替换成&lt;和&gt;
+ */
+function sanitize(data: Rule) {
+    for (const declaration of data) {
+        switch (declaration.type) {
+            case 'data-type':
+                declaration.placeholder = replaceAngleBracket(declaration.placeholder);
+
+                break;
+
+            case 'option-type':
+                declaration.value = replaceAngleBracket(declaration.value);
+                declaration.options = declaration.options.map(replaceAngleBracket);
+
+                break;
+
+            case 'mixed-type':
+                declaration.option.value = replaceAngleBracket(declaration.option.value);
+                declaration.option.options = declaration.option.options.map(replaceAngleBracket);
+
+                declaration.dataType.placeholder = replaceAngleBracket(declaration.dataType.placeholder);
+
+                break;
         }
     }
 }
 
-// TODO: 动态检查 - 必须能在options中找到所有的option的value，以及dataType中的[Key in `<${string}>`]中的Key
-// TODO: 动态检查 - 必须把所有的<都置换成&lt;，把所有的>都置换成&gt;
+/**
+ * 检查数据是否合规
+ */
+function check(data: Rule) {
+    for (const declaration of data) {
+        switch (declaration.type) {
+            case 'data-type':
+                break;
+
+            case 'option-type':
+                if (!declaration.options.includes(declaration.value))
+                    throw new Error('OptionType: Unable to find the value of the option in the options array');
+                if (!declaration.options.every(isOption))
+                    throw new Error('OptionType: the options array contains a dataType value');
+
+                break;
+
+            case 'mixed-type':
+                if (!declaration.option.options.includes(declaration.option.value))
+                    throw new Error('MixedType: Unable to find the value of the option in the options array');
+                if (declaration.option.options.every(isOption))
+                    throw new Error('MixedType: There is no dataType value in the options array');
+                if (declaration.option.options.every(isDataType))
+                    throw new Error('MixedType: There is no option value in the options array');
+
+                break;
+        }
+    }
+}
 
 export default data;
