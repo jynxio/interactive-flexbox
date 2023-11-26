@@ -1,4 +1,5 @@
 import { Rule } from '@/types/rule';
+import { validateRuleData, sanitizeRuleData } from '@/utils';
 
 const data: Rule = [
     {
@@ -26,3 +27,8 @@ const data: Rule = [
         placeholder: '<positive number>',
     },
 ];
+
+sanitizeRuleData(data);
+validateRuleData(data);
+
+export default data;
