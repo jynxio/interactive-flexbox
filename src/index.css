@@ -1,7 +1,8 @@
 html,
 body {
-    background-color: #0d0f11;
     color-scheme: only dark;
+    font-family: system-ui;
+    background-color: #0d0f11;
 }
 
 #root {

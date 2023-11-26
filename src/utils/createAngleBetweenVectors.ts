@@ -1,4 +1,4 @@
-import { Radian, Vector } from '@/types';
+import { Radian, Vector } from '@/types/math';
 
 /**
  * 计算二维向量v1至v2的逆时针夹角（弧度）

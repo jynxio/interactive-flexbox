@@ -1,7 +1,7 @@
 <template>
     <div :class="$style.wrapper">
         <main ref="containerDom" :class="$style['flex-container']">
-            <i v-for="index in itemCount" :key="index" />
+            <i v-for="index in itemCount" :key="index">{{ index }}</i>
         </main>
         <aside :class="$style['main-axis']" :style="{ rotate: mainCssRotation }"><Axis type="main" /></aside>
         <aside :class="$style['cross-axis']" :style="{ rotate: crossCssRotation }"><Axis type="cross" /></aside>
@@ -15,7 +15,7 @@
 import containerRuleData from '@/assets/container';
 import Axis from '@/components/Axis.vue';
 import { GUI as Gui } from 'lil-gui';
-import { Radian, Vector } from '@/types';
+import { Radian, Vector } from '@/types/math';
 import { isDataType, createAngleBetweenVectors } from '@/utils';
 import { ref, reactive, watchSyncEffect, onMounted } from 'vue';
 
@@ -61,6 +61,7 @@ for (const declaration of containerRuleData) {
 const gui = new Gui().title('CSS Rule Controller');
 const guiData = structuredClone(containerRuleData); //避免污染原始数据
 const containerFolder = gui.addFolder('Flex Container CSS Rule');
+const itemsFolder = gui.addFolder('Flex Items CSS Rule');
 
 for (const declaration of guiData) {
     const { name, type } = declaration;
@@ -189,6 +190,10 @@ function createCssRotation(angle: Radian): string {
             flex: 1 1 10%;
             border-radius: 5px;
             border: 2px solid #778089;
+            color: #778089;
+            font-style: normal;
+            font-weight: 700;
+            text-align: center;
             background-color: #2d333a;
         }
     }

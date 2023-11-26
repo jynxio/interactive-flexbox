@@ -128,9 +128,8 @@ defineProps({
     position: absolute;
     inset: 50% auto auto 0;
     color: var(--body-color);
-    font-size: 0.65rem;
+    font-size: 0.8rem;
     font-family: system-ui;
-    font-weight: 1000;
     text-shadow: 0 0 2px var(--shadow-color);
     translate: var(--inline-offset) var(--block-offset);
 }
