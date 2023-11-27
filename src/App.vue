@@ -299,6 +299,7 @@ function createCssRotation(angle: Radian): string {
             font-weight: 700;
             text-align: center;
             background-color: #2d333a;
+            user-select: none;
         }
     }
 
