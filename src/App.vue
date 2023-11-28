@@ -1,7 +1,7 @@
 <template>
     <div :class="$style.wrapper">
-        <main ref="containerDom" :class="$style['flex-container']">
-            <i v-for="index in itemCount" :key="index">{{ index }}</i>
+        <main ref="containerDom" :class="$style['flex-container']" :style="containerStyle">
+            <i v-for="index in itemCount" :key="index" :style="itemStyles[0]">{{ index }}</i>
         </main>
         <aside :class="$style['main-axis']" :style="{ rotate: mainCssRotation }"><Axis type="main" /></aside>
         <aside :class="$style['cross-axis']" :style="{ rotate: crossCssRotation }"><Axis type="cross" /></aside>
@@ -13,216 +13,46 @@
 
 <script setup lang="ts">
 import containerRuleData from '@/assets/container';
-import itemsRuleData from '@/assets/items';
+import itemRuleData from '@/assets/item';
 import Axis from '@/components/Axis.vue';
 import { GUI as Gui } from 'lil-gui';
 import { Radian, Vector } from '@/types/math';
+import { Rule } from '@/types/rule';
 import { isDataType, createAngleBetweenVectors } from '@/utils';
-import { ref, reactive, watchSyncEffect, onMounted, computed, triggerRef } from 'vue';
+import { ref, reactive, watchSyncEffect, onMounted, computed } from 'vue';
 
 /**
  *
  */
+type Style = { [key: string]: string };
+
+/**
+ *
+ */
+const gui = new Gui().title('CSS Rule Controller');
+
 const listenerDom = ref<HTMLElement>();
 const containerDom = ref<HTMLElement>();
+
+const itemCount = ref(5); // Flex item数
+
+gui.add(itemCount, 'value', 0, 10, 1).name('count');
+
+/**
+ * Flex Container
+ */
+const containerRule = reactive(structuredClone(containerRuleData));
+const containerStyle = computed<Style>(() => createStyle(containerRule));
+const containerFolder = fillFolder(gui.addFolder('Flex Container CSS Rule'), containerRule);
 
 const mainCssRotation = ref('0deg');
 const crossCssRotation = ref('odeg');
 
-const itemCount = ref(5); // Flex item数
-
-const containerRule = reactive<{ [key: string]: string }>({});
-
-// 初始化containerRule
-for (const declaration of containerRuleData) {
-    const { name, type } = declaration;
-
-    switch (type) {
-        case 'data-type':
-        case 'option-type': {
-            containerRule[name] = declaration.value;
-
-            break;
-        }
-
-        case 'mixed-type': {
-            const mode = isDataType(declaration.option.value) ? 'data-type' : 'option-type';
-            const value = mode === 'option-type' ? declaration.option.value : declaration.dataType.value;
-
-            containerRule[name] = value;
-
-            break;
-        }
-    }
-}
-
-const itemsRule = computed<{ [key: string]: string }[]>({
-    get: () => {
-        const itemRule: { [key: string]: string } = {};
-
-        for (const declaration of itemsRuleData) {
-            const { name, type } = declaration;
-
-            switch (type) {
-                case 'data-type':
-                case 'option-type': {
-                    itemRule[name] = declaration.value;
-
-                    break;
-                }
-
-                case 'mixed-type': {
-                    const mode = isDataType(declaration.option.value) ? 'data-type' : 'option-type';
-                    const value = mode === 'option-type' ? declaration.option.value : declaration.dataType.value;
-
-                    itemRule[name] = value;
-
-                    break;
-                }
-            }
-        }
-
-        return Array.from({ length: itemCount.value }).map(() => structuredClone(itemRule));
-    },
-    set: () => {},
-});
-
-// 初始化itemsRule
-
-/**
- * 控制面板
- */
-const gui = new Gui().title('CSS Rule Controller');
-
-gui.add(itemCount, 'value', 0, 10, 1).name('count');
-
-const containerFolder = gui.addFolder('Flex Container CSS Rule');
-
-for (const declaration of structuredClone(containerRuleData)) {
-    const { name, type } = declaration;
-
-    switch (type) {
-        case 'data-type':
-        case 'option-type': {
-            const options = type === 'option-type' ? declaration.options : undefined;
-
-            containerFolder
-                .add(declaration, 'value', options)
-                .name(name)
-                .onChange((value: string) => (containerRule[name] = value));
-
-            break;
-        }
-
-        case 'mixed-type': {
-            const { option, dataType } = declaration;
-            const optionController = containerFolder.add(option, 'value', option.options).name(name);
-            const dataTypeController = containerFolder.add(dataType, 'value').name('');
-
-            dataTypeController[isDataType(option.value) ? 'show' : 'hide']();
-
-            dataTypeController.onChange((value: string) => (containerRule[name] = value));
-            optionController.onChange((value: string) => {
-                if (isDataType(value)) {
-                    dataTypeController.show();
-                    containerRule[name] = dataType.value;
-
-                    return;
-                }
-
-                dataTypeController.hide();
-                containerRule[name] = option.value;
-            });
-
-            break;
-        }
-    }
-}
-
-const itemsFolder = gui.addFolder('Flex Items CSS Rule');
-
-for (const declaration of structuredClone(itemsRuleData)) {
-    const { name, type } = declaration;
-
-    switch (type) {
-        case 'data-type':
-        case 'option-type': {
-            const options = type === 'option-type' ? declaration.options : undefined;
-
-            itemsFolder
-                .add(declaration, 'value', options)
-                .name(name)
-                .onChange((value: string) => {
-                    itemsRule.value.forEach(itemRule => (itemRule[name] = value));
-                    triggerRef(itemsRule);
-                });
-
-            break;
-        }
-
-        case 'mixed-type': {
-            const { option, dataType } = declaration;
-            const optionController = itemsFolder.add(option, 'value', option.options).name(name);
-            const dataTypeController = itemsFolder.add(dataType, 'value').name('');
-
-            dataTypeController[isDataType(option.value) ? 'show' : 'hide']();
-
-            dataTypeController.onChange((value: string) => {
-                itemsRule.value.forEach(itemRule => (itemRule[name] = value));
-                triggerRef(itemsRule);
-            });
-            optionController.onChange((value: string) => {
-                if (isDataType(value)) {
-                    dataTypeController.show();
-                    itemsRule.value.forEach(itemRule => (itemRule[name] = dataType.value));
-                    triggerRef(itemsRule);
-
-                    return;
-                }
-
-                dataTypeController.hide();
-                itemsRule.value.forEach(itemRule => (itemRule[name] = option.value));
-                triggerRef(itemsRule);
-            });
-
-            break;
-        }
-    }
-}
-
-/**
- * 更新样式
- */
 onMounted(() => {
-    // 更新Flex Container元素
-    const containerProperties = Object.keys(containerRule);
-
-    for (const property of containerProperties)
-        watchSyncEffect(() => containerDom.value!.style.setProperty(property, containerRule[property]));
-
-    // TODO: 优化
-    // 更新Flex Item元素
-    itemsRule.value.forEach((itemRule, index) => {
-        const itemProperties = Object.keys(itemRule);
-
-        itemProperties.forEach(property => {
-            const dom = containerDom.value!.children[index];
-
-            if (!(dom instanceof HTMLElement)) throw new Error("TypeError: it's not a HTMLElement");
-
-            watchSyncEffect(() => dom.style.setProperty(property, itemsRule.value[index][property]));
-        });
-    });
-    const itemsProperties = Object.keys(itemsRule);
-
-    for (const property of itemsProperties)
-        watchSyncEffect(() => containerDom.value!.style.setProperty(property, containerRule[property]));
-
-    // 更新Flex Container 的Listener元素
     watchSyncEffect(() => {
-        listenerDom.value!.style.setProperty('direction', containerRule.direction);
-        listenerDom.value!.style.setProperty('writing-mode', containerRule['writing-mode']);
-        listenerDom.value!.style.setProperty('flex-direction', containerRule['flex-direction']);
+        listenerDom.value!.style.setProperty('direction', containerStyle.value.direction);
+        listenerDom.value!.style.setProperty('writing-mode', containerStyle.value['writing-mode']);
+        listenerDom.value!.style.setProperty('flex-direction', containerStyle.value['flex-direction']);
 
         const children = listenerDom.value!.children;
         const domrects = Array.from(children).map(child => child.getBoundingClientRect());
@@ -238,6 +68,97 @@ onMounted(() => {
         crossCssRotation.value = createCssRotation(radianCross);
     });
 });
+
+/**
+ * Flex Items
+ */
+// TODO:
+const itemMode = ref<'all' | 'single'>('all');
+const itemAction = {
+    all: () => (itemMode.value = 'all'),
+    single: () => (itemMode.value = 'single'),
+};
+
+const allItemRule = reactive(structuredClone(itemRuleData));
+const allItemFolder = gui.addFolder('Flex items CSS Rule');
+
+allItemFolder.add(itemAction, 'all').name('Activate');
+fillFolder(allItemFolder, allItemRule);
+
+const singleItemRules = reactive(Array.from({ length: itemCount.value }).map(() => structuredClone(itemRuleData)));
+const singleItemFolder = gui.addFolder('Flex Item CSS Rule');
+
+singleItemFolder.add(itemAction, 'single').name('Activate');
+
+const itemStyles = computed<Style[]>(() => {
+    const styles: Style[] = [];
+
+    styles.push(createStyle(allItemRule));
+
+    return styles;
+});
+
+/**
+ * 创建CSS的Style对象
+ */
+function createStyle(data: Rule): Style {
+    const style: Style = {};
+
+    for (const declaration of data) {
+        const { name, type } = declaration;
+
+        switch (type) {
+            case 'data-type':
+            case 'option-type': {
+                style[name] = declaration.value;
+
+                break;
+            }
+
+            case 'mixed-type': {
+                const mode = isDataType(declaration.option.value) ? 'data-type' : 'option-type';
+                const value = mode === 'option-type' ? declaration.option.value : declaration.dataType.value;
+
+                style[name] = value;
+
+                break;
+            }
+        }
+    }
+
+    return style;
+}
+
+/**
+ * 填充Gui的Folder
+ */
+function fillFolder(folder: Gui, data: Rule): Gui {
+    for (const declaration of data) {
+        const { name, type } = declaration;
+
+        switch (type) {
+            case 'data-type':
+            case 'option-type': {
+                folder.add(declaration, 'value', type === 'option-type' ? declaration.options : undefined).name(name);
+
+                break;
+            }
+
+            case 'mixed-type': {
+                const { option, dataType } = declaration;
+                const optionController = folder.add(option, 'value', option.options).name(name);
+                const dataTypeController = folder.add(dataType, 'value').name('');
+
+                dataTypeController[isDataType(option.value) ? 'show' : 'hide']();
+                optionController.onChange((value: string) => dataTypeController[isDataType(value) ? 'show' : 'hide']());
+
+                break;
+            }
+        }
+    }
+
+    return folder;
+}
 
 /**
  * 创建CSS的旋转值

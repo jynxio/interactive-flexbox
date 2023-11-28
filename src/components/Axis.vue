@@ -129,7 +129,7 @@ defineProps({
     inset: 50% auto auto 0;
     color: var(--body-color);
     font-size: 0.8rem;
-    font-family: system-ui;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     text-shadow: 0 0 2px var(--shadow-color);
     translate: var(--inline-offset) var(--block-offset);
 }
