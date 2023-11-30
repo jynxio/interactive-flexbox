@@ -13,7 +13,8 @@
 
 <script setup lang="ts">
 import containerRuleData from '@/assets/container';
-import itemRuleData from '@/assets/item';
+import singleItemRuleData from '@/assets/singleItem';
+import allItemRuleData from '@/assets/allItem';
 import Axis from '@/components/Axis.vue';
 import { GUI as Gui } from 'lil-gui';
 import { Radian, Vector } from '@/types/math';
@@ -72,31 +73,62 @@ onMounted(() => {
 /**
  * Flex Items
  */
-// TODO:
 const itemMode = ref<'all' | 'single'>('all');
+const itemIndex = ref<number | 'Select a number'>('Select a number');
+
+watchSyncEffect(() => {
+    if (itemIndex.value === 'Select a number') return;
+    if (itemIndex.value < itemCount.value) return;
+
+    itemIndex.value = 'Select a number';
+});
+
 const itemAction = {
     all: () => (itemMode.value = 'all'),
     single: () => (itemMode.value = 'single'),
 };
+const itemFolder = gui.addFolder('Flex items css Rule');
 
-const allItemRule = reactive(structuredClone(itemRuleData));
-const allItemFolder = gui.addFolder('Flex items CSS Rule');
+// Set all items
+const allItemRule = reactive(structuredClone(allItemRuleData));
+const allItemFolder = fillFolder(itemFolder.addFolder(''), allItemRule);
 
-allItemFolder.add(itemAction, 'all').name('Activate');
-fillFolder(allItemFolder, allItemRule);
+itemFolder.add(itemAction, 'all').name('Set all Flex items');
 
-const singleItemRules = reactive(Array.from({ length: itemCount.value }).map(() => structuredClone(itemRuleData)));
-const singleItemFolder = gui.addFolder('Flex Item CSS Rule');
+// Set a specific item
+const singleItemRule = reactive<Rule[]>([]);
 
-singleItemFolder.add(itemAction, 'single').name('Activate');
+watchSyncEffect(() => {
+    const delta = itemCount.value - singleItemRule.length;
 
-const itemStyles = computed<Style[]>(() => {
-    const styles: Style[] = [];
-
-    styles.push(createStyle(allItemRule));
-
-    return styles;
+    if (delta === 0) return;
+    if (delta < 0) return void (singleItemRule.length = itemCount.value);
+    for (let i = 0; i < delta; i++) singleItemRule.push(structuredClone(singleItemRuleData));
 });
+
+const singleItemFolder = itemFolder.addFolder('');
+const singleItemOption = computed(() => Array.from({ length: itemCount.value }).map((_, index) => String(++index)));
+const singleItemOptionController = singleItemFolder
+    .add(itemIndex, 'value', singleItemOption.value)
+    .name('Flex Item number');
+
+watchSyncEffect(() => singleItemOptionController.options(singleItemOption.value));
+
+itemFolder.add(itemAction, 'single').name('Set an Flex item');
+
+// Create the style object of all item
+const itemStyles = computed<Style[]>(() => {
+    if (itemMode.value === 'all') return [createStyle(allItemRule)];
+
+    return singleItemRule.map(rule => createStyle(rule));
+});
+
+// TODO:
+
+// const singleItemRules = reactive(Array.from({ length: itemCount.value }).map(() => structuredClone(allItemRuleData)));
+// const singleItemFolder = gui.addFolder('Flex Item CSS Rule');
+
+// singleItemFolder.add(itemAction, 'single').name('Activate');
 
 /**
  * 创建CSS的Style对象
