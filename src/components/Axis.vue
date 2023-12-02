@@ -11,7 +11,7 @@
             <div :class="$style.header"></div>
         </section>
         <section :class="$style['axis-title']">
-            {{ type === 'main' ? 'MAIN AXIS' : 'CROSS AXIS' }}
+            {{ type === 'main' ? 'Main Axis' : 'Cross Axis' }}
         </section>
     </div>
 </template>
@@ -30,7 +30,7 @@ defineProps({
 
 <style module>
 .wrapper {
-    --base-thickness: 0.2rem;
+    --base-thickness: 0.15rem;
     --shadow-color: #0d0f11;
 
     &.main {
@@ -122,15 +122,14 @@ defineProps({
 }
 
 .axis-title {
-    --block-offset: calc(var(--base-thickness));
-    --inline-offset: calc(var(--block-offset) * 3);
-
     position: absolute;
     inset: 50% auto auto 0;
     color: var(--body-color);
-    font-size: 0.8rem;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-family: monospace;
+    line-height: 2;
+    writing-mode: vertical-lr;
     text-shadow: 0 0 2px var(--shadow-color);
-    translate: var(--inline-offset) var(--block-offset);
+    rotate: 180deg;
+    translate: -100% -50%;
 }
 </style>

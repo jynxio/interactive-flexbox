@@ -8,6 +8,10 @@
         <aside ref="listenerDom" :class="$style.listener">
             <i v-for="index in Array.from({ length: 4 })" :key="String(index)" />
         </aside>
+        <address :class="$style.address">
+            Made by Jynxio |
+            <a href="https://github.com/jynxio/interactive-flexbox" target="_blank">Source Code</a>
+        </address>
     </div>
 </template>
 
@@ -16,7 +20,7 @@ import containerRuleData from '@/assets/container';
 import singleItemRuleData from '@/assets/singleItem';
 import allItemRuleData from '@/assets/allItem';
 import Axis from '@/components/Axis.vue';
-import { GUI as Gui } from 'lil-gui';
+import { GUI as Gui, Controller } from 'lil-gui';
 import { Radian, Vector } from '@/types/math';
 import { Rule } from '@/types/rule';
 import { isDataType, createAngleBetweenVectors } from '@/utils';
@@ -30,13 +34,11 @@ type Style = { [key: string]: string };
 /**
  *
  */
-const gui = new Gui().title('CSS Rule Controller');
-
+const itemCount = ref(5); // Flex item数
 const listenerDom = ref<HTMLElement>();
 const containerDom = ref<HTMLElement>();
 
-const itemCount = ref(5); // Flex item数
-
+const gui = new Gui().title('CSS Rule Controller');
 gui.add(itemCount, 'value', 0, 10, 1).name('count');
 
 /**
@@ -44,7 +46,8 @@ gui.add(itemCount, 'value', 0, 10, 1).name('count');
  */
 const containerRule = reactive(structuredClone(containerRuleData));
 const containerStyle = computed<Style>(() => createStyle(containerRule));
-const containerFolder = fillFolder(gui.addFolder('Flex Container CSS Rule'), containerRule);
+
+fillFolder(gui.addFolder('Flex Container CSS Rule'), containerRule);
 
 const mainCssRotation = ref('0deg');
 const crossCssRotation = ref('odeg');
@@ -74,23 +77,26 @@ onMounted(() => {
  * Flex Items
  */
 const itemMode = ref<'all' | 'single'>('all');
-const itemIndex = ref<number | 'Select a number'>('Select a number');
+const itemIndex = ref<number | 'Select a index'>('Select a index');
+const itemFolder = gui.addFolder('Flex items css Rule');
+const itemModeAction = {
+    all: () => (itemMode.value = 'all'),
+    single: () => (itemMode.value = 'single'),
+};
 
 watchSyncEffect(() => {
-    if (itemIndex.value === 'Select a number') return;
+    if (itemIndex.value === 'Select a index') return;
     if (itemIndex.value < itemCount.value) return;
 
-    itemIndex.value = 'Select a number';
+    itemIndex.value = 'Select a index';
 });
-
-const itemFolder = gui.addFolder('Flex items css Rule');
 
 // Set all items
 const allItemRule = reactive(structuredClone(allItemRuleData));
-const allItemFolder = itemFolder.addFolder('Set all');
+const allItemFolder = itemFolder.addFolder('');
+const allItemSwitch = itemFolder.add(itemModeAction, 'all').name('Set all');
 
 fillFolder(allItemFolder, allItemRule);
-allItemFolder.close().onOpenClose(({ _closed }) => (itemMode.value = _closed ? 'single' : 'all'));
 
 // Set a specific item
 const singleItemRule = reactive<Rule[]>([]);
@@ -103,10 +109,8 @@ watchSyncEffect(() => {
     for (let i = 0; i < delta; i++) singleItemRule.push(structuredClone(singleItemRuleData));
 });
 
-const singleItemFolder = itemFolder.addFolder('Set single');
-
-singleItemFolder.close().onOpenClose(({ _closed }) => (itemMode.value = _closed ? 'all' : 'single'));
-
+const singleItemFolder = itemFolder.addFolder('');
+const singleItemSwitch = itemFolder.add(itemModeAction, 'single').name('Set single');
 const singleItemOption = computed(() => Array.from({ length: itemCount.value }).map((_, index) => String(index)));
 const singleItemOptionController = singleItemFolder
     .add(itemIndex, 'value', singleItemOption.value)
@@ -120,22 +124,28 @@ watch(
 
         while (singleItemFolder.children.length > 1) singleItemFolder.children.at(-1)?.destroy();
 
-        if (itemIndex.value === 'Select a number') return;
-
-        fillFolder(singleItemFolder, singleItemRule[itemIndex.value]);
+        next === 'Select a index' || fillFolder(singleItemFolder, singleItemRule[next]);
     },
     { immediate: true, flush: 'sync' },
 );
+
+// Switch mode
 watchSyncEffect(() => {
     if (itemMode.value === 'all') {
-        allItemFolder.open();
-        singleItemFolder.close();
+        allItemSwitch.disable();
+        singleItemSwitch.enable();
+
+        allItemFolder.children.forEach(item => item instanceof Controller && item.enable());
+        singleItemFolder.children.forEach(item => item instanceof Controller && item.disable());
 
         return;
     }
 
-    allItemFolder.close();
-    singleItemFolder.open();
+    allItemSwitch.enable();
+    singleItemSwitch.disable();
+
+    allItemFolder.children.forEach(item => item instanceof Controller && item.disable());
+    singleItemFolder.children.forEach(item => item instanceof Controller && item.enable());
 });
 
 // Create the style object of all item
@@ -264,7 +274,8 @@ function createCssRotation(angle: Radian): string {
             border: 2px solid #778089;
             color: #778089;
             font-style: normal;
-            font-weight: 700;
+            font-family: monospace;
+            line-height: 2;
             text-align: center;
             background-color: #2d333a;
             user-select: none;
@@ -281,6 +292,24 @@ function createCssRotation(angle: Radian): string {
         z-index: 3;
         pointer-events: none;
         transition: all 1000ms cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    > .address {
+        all: initial;
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        inline-size: 100%;
+        margin-block-end: 1.25dvh;
+        color: white;
+        font-family: monospace;
+        font-style: normal;
+        font-weight: 400;
+        text-align: center;
+
+        > a {
+            color: inherit;
+        }
     }
 }
 </style>
