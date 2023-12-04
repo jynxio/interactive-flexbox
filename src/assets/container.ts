@@ -60,8 +60,9 @@ const data: Rule = [
             'last baseline',
             'start',
             'end',
-            'self-start',
-            'self-end',
+            'space-between',
+            'space-around',
+            'space-evenly',
         ],
     },
     {
@@ -79,9 +80,8 @@ const data: Rule = [
             'last baseline',
             'start',
             'end',
-            'space-between',
-            'space-around',
-            'space-evenly',
+            'self-start',
+            'self-end',
         ],
     },
     {
