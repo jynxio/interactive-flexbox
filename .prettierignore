@@ -5,6 +5,8 @@
 # Production
 **/dist
 **/build
+**/dist-ssr
+**/build-ssr
 
 # Markdown
 **/*.md

@@ -7,10 +7,16 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Development
 *.local
+node_modules
+package-lock.json
+
+# Production
+dist
+build
+dist-ssr
+build-ssr
 
 # Editor directories and files
 .idea

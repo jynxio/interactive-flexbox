@@ -40,6 +40,9 @@ devDependencies:
   eslint-plugin-vue:
     specifier: ^9.19.2
     version: 9.19.2(eslint@8.55.0)
+  postcss:
+    specifier: ^8.4.32
+    version: 8.4.32
   postcss-nested:
     specifier: ^6.0.1
     version: 6.0.1(postcss@8.4.32)
