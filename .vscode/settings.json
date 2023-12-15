@@ -7,8 +7,8 @@
     "eslint.format.enable": true,
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
-    },
+		"source.fixAll.eslint": "explicit"
+	},
     "workbench.editor.highlightModifiedTabs": true,
     "workbench.editor.tabSizing": "shrink",
     "vetur.validation.template": false,
