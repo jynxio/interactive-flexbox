@@ -13,13 +13,13 @@
     },
     "dependencies": {
         "lil-gui": "^0.19.1",
-        "vue": "^3.3.9"
+        "vue": "^3.4.15"
     },
     "devDependencies": {
-        "@types/node": "^20.11.3",
-        "@typescript-eslint/eslint-plugin": "^6.19.0",
-        "@typescript-eslint/parser": "^6.13.1",
-        "@vitejs/plugin-vue": "^4.5.1",
+        "@types/node": "^20.11.5",
+        "@typescript-eslint/eslint-plugin": "^6.19.1",
+        "@typescript-eslint/parser": "^6.19.1",
+        "@vitejs/plugin-vue": "^5.0.3",
         "autoprefixer": "^10.4.17",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
@@ -29,14 +29,14 @@
         "postcss-nested": "^6.0.1",
         "postcss-preset-env": "^9.3.0",
         "postcss-sorting": "^8.0.2",
-        "prettier": "^3.1.0",
-        "stylelint": "^15.11.0",
+        "prettier": "^3.2.4",
+        "stylelint": "^16.2.0",
         "stylelint-config-prettier": "^9.0.5",
         "stylelint-config-recommended-vue": "^1.5.0",
-        "stylelint-config-standard": "^34.0.0",
+        "stylelint-config-standard": "^36.0.0",
         "typescript": "^5.3.3",
         "vite": "^5.0.12",
-        "vue-eslint-parser": "^9.4.0",
-        "vue-tsc": "^1.8.24"
+        "vue-eslint-parser": "^9.4.2",
+        "vue-tsc": "^1.8.27"
     }
 }
